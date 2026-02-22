@@ -1,13 +1,1 @@
-.env
-data/smiles.db
-data/cache/
-data/run.log
-__pycache__/
-*.pyc
 .DS_Store
-.venv/
-
-# フロントエンド（バッチ生成物・ビルド成果物）
-frontend/public/data/smiles.json
-frontend/.next/
-frontend/node_modules/
