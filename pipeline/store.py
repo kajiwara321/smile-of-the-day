@@ -105,7 +105,12 @@ def export_json(output_path: str) -> int:
         for r in rows
     ]
 
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    with open(output_path, "w") as f:
-        json.dump(photos, f)
+    import tempfile
+    output_dir = os.path.dirname(output_path)
+    os.makedirs(output_dir, exist_ok=True)
+    # 一時ファイルに書き出してからアトミックに置き換える（部分読み取り防止）
+    with tempfile.NamedTemporaryFile("w", dir=output_dir, delete=False, suffix=".tmp") as tmp:
+        json.dump(photos, tmp)
+        tmp_path = tmp.name
+    os.replace(tmp_path, output_path)
     return len(photos)
