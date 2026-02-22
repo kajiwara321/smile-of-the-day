@@ -1,6 +1,8 @@
 """Flickr API から笑顔写真候補を収集する"""
 
 import os
+from datetime import datetime, timedelta
+
 import flickrapi
 from dotenv import load_dotenv
 
@@ -9,16 +11,18 @@ load_dotenv()
 API_KEY = os.environ["FLICKR_API_KEY"]
 SECRET  = os.environ["FLICKR_SECRET"]
 
-# CCライセンスホワイトリスト（NC/ND系は除外）
-# 4=CC BY, 5=CC BY-SA, 6=CC BY-ND, 9=CC0, 10=PDM
-ALLOWED_LICENSES = "4,5,6,9,10"
-
-SEARCH_TAGS = "smile,happy,笑顔"
+# 人物写真を広く取得し、笑顔かどうかは DeepFace に委ねる
+SEARCH_TAGS = "portrait,people,person,family"
 
 
-def fetch_candidates(per_page: int = 250) -> list[dict]:
+def fetch_candidates(per_page: int = 500, days: int = 7) -> list[dict]:
     """
-    Flickr API でジオタグ付き笑顔写真を検索し、候補リストを返す。
+    Flickr API でジオタグ付き人物写真を検索し、候補リストを返す。
+    笑顔フィルタは行わない（detect.py の DeepFace に委ねる）。
+
+    Args:
+        per_page: 取得件数（デフォルト500）
+        days: 過去何日分を取得するか（デフォルト7日）
 
     Returns:
         list of dict with keys:
@@ -27,17 +31,20 @@ def fetch_candidates(per_page: int = 250) -> list[dict]:
     """
     flickr = flickrapi.FlickrAPI(API_KEY, SECRET, format="parsed-json")
 
+    min_date = int((datetime.now() - timedelta(days=days)).timestamp())
+
     result = flickr.photos.search(
         tags=SEARCH_TAGS,
         tag_mode="any",
         has_geo=1,
-        license=ALLOWED_LICENSES,
+        # license= 削除（CCライセンス条件を外して取得数を増やす）
         content_type=1,          # 写真のみ（スクリーンショット・イラスト除外）
         safe_search=1,           # Safe コンテンツのみ
         extras="geo,url_m,date_taken,license,accuracy",
         per_page=per_page,
         page=1,
         sort="date-posted-desc",
+        min_upload_date=min_date,
     )
 
     photos = result.get("photos", {}).get("photo", [])
