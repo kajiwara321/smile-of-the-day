@@ -26,10 +26,10 @@ logger = logging.getLogger(__name__)
 
 
 def run_batch():
-    """Flickr 収集 → 笑顔検出 → DB保存 を1サイクル実行する"""
+    """Flickr 収集 → 笑顔検出 → DB保存 → JSON書き出し を1サイクル実行する"""
     from pipeline.collect import fetch_candidates
     from pipeline.detect import analyze_smile
-    from pipeline.store import init_db, save_photo, count_photos
+    from pipeline.store import init_db, save_photo, count_photos, export_json
 
     logger.info("=== バッチ開始 ===")
     init_db()
@@ -63,6 +63,10 @@ def run_batch():
         f"保存:{saved} / 重複スキップ:{skipped_dup} / 笑顔なしスキップ:{skipped_no_smile} "
         f"/ DB合計:{total} 件"
     )
+
+    json_path = str(Path(__file__).parent.parent / "frontend" / "public" / "data" / "smiles.json")
+    n = export_json(json_path)
+    logger.info(f"JSON書き出し完了: {n} 件 → {json_path}")
 
 
 if __name__ == "__main__":

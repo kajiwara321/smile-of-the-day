@@ -2,6 +2,7 @@
 
 import sqlite3
 import os
+import json
 from datetime import datetime, timezone
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "smiles.db")
@@ -70,3 +71,41 @@ def count_photos() -> int:
     row = conn.execute("SELECT COUNT(*) FROM photos").fetchone()
     conn.close()
     return row[0]
+
+
+def export_json(output_path: str) -> int:
+    """DBから全件取得してJSONファイルに書き出す。件数を返す。"""
+    import struct
+
+    def _to_float(v):
+        """bytes型の場合はlittle-endian float32として変換する"""
+        if isinstance(v, bytes):
+            return round(struct.unpack('<f', v)[0], 4)
+        return v
+
+    conn = sqlite3.connect(DB_PATH)
+    rows = conn.execute("""
+        SELECT flickr_id, url_medium, photo_page_url,
+               lat, lon, emotion_happy_prob, taken_date
+        FROM photos
+        ORDER BY collected_at DESC
+    """).fetchall()
+    conn.close()
+
+    photos = [
+        {
+            "flickr_id": r[0],
+            "url_medium": r[1],
+            "photo_page_url": r[2],
+            "lat": r[3],
+            "lon": r[4],
+            "emotion_happy_prob": _to_float(r[5]),
+            "taken_date": r[6],
+        }
+        for r in rows
+    ]
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, "w") as f:
+        json.dump(photos, f)
+    return len(photos)
